@@ -16,6 +16,8 @@
     "@react-navigation/native-stack": "^7.3.21",
     "react": "19.1.0",
     "react-native": "0.80.1",
+    "react-native-edge-to-edge": "^1.6.2",
+    "react-native-gesture-handler": "^2.27.1",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.11.1"
   },
