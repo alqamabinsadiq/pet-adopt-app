@@ -1,97 +1,200 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# PetWatch - Pet Adoption App
 
-# Getting Started
+A beautiful React Native app for pet adoption with a modern UI design inspired by the PetWatch brand colors.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
 
-## Step 1: Start Metro
+### ✅ Completed Features
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+1. **Pet Listing Screen**
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+   - Beautiful card-based design with pet images
+   - Shows pet name, breed, age, gender, and price
+   - Smooth scrolling with FlatList
+   - Theme-consistent design with coral-orange primary color
 
-```sh
-# Using npm
-npm start
+2. **Pet Details Screen**
 
-# OR using Yarn
-yarn start
+   - Comprehensive pet information display
+   - Health status, vaccination, and neutering details
+   - Temperament badges
+   - Beautiful hero image with price overlay
+   - Adopt button for easy adoption process
+
+3. **Adoption Process**
+
+   - Mock payment screen with adoption confirmation
+   - Processing animation and success feedback
+   - Detailed breakdown of adoption fees
+   - What's included section (health certificate, vaccination records, etc.)
+   - Step-by-step next steps guide
+
+4. **Location Screen**
+
+   - Simulated location services
+   - Displays user coordinates
+   - Map placeholder for Google Maps integration
+   - Nearby pet shelters list
+   - Refresh and share location functionality
+
+5. **Navigation**
+   - Bottom tab navigation with Home and Location tabs
+   - Stack navigation for pet details and adoption flow
+   - Modal presentation for adoption screen
+   - Consistent theming throughout
+
+### 🎨 Design Features
+
+- **Theme Colors**: Based on PetWatch brand colors
+  - Primary: Coral-orange (#FF6B5B)
+  - Accent Dark: Dark blue/purple (#333B5C)
+  - Accent Purple: (#8A4D9F)
+  - Accent Teal: (#34C7D8)
+- **Modern UI**: Clean, card-based design with shadows and rounded corners
+- **Responsive**: Works on different screen sizes
+- **Accessible**: Proper contrast ratios and touch targets
+
+## Project Structure
+
+```
+app/
+├── features/
+│   ├── adoption/
+│   │   └── screens/
+│   │       └── AdoptScreen.tsx
+│   ├── location/
+│   │   └── screens/
+│   │       └── LocationScreen.tsx
+│   └── pets/
+│       ├── components/
+│       │   ├── PetCard.tsx
+│       │   └── index.ts
+│       ├── screens/
+│       │   ├── PetListScreen.tsx
+│       │   └── PetDetailsScreen.tsx
+│       └── types.ts
+├── foundation/
+│   ├── assets/
+│   │   ├── data/
+│   │   │   └── dummyList.ts
+│   │   └── images/
+│   │       └── pets/
+│   ├── theme/
+│   │   ├── colors.ts
+│   │   └── index.ts
+│   └── utils/
+│       ├── imageUtils.ts
+│       └── index.ts
+└── navigation/
+    ├── AppNavigator.tsx
+    ├── TabNavigator.tsx
+    ├── RouteParamTypes.ts
+    └── index.tsx
 ```
 
-## Step 2: Build and run your app
+## Code Quality & Best Practices
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### 🛠️ Utility Functions
 
-### Android
+- **Centralized Image Handling**: `getPetImage()` and `getPetImageSource()` functions eliminate code duplication
+- **Type Safety**: Full TypeScript support with proper interfaces
+- **Modular Architecture**: Feature-based folder structure for better organization
+- **Reusable Components**: PetCard component can be used across different screens
 
-```sh
-# Using npm
-npm run android
+### 📦 Key Utilities
 
-# OR using Yarn
+```typescript
+// Centralized image loading utility
+import { getPetImage, getPetImageSource } from '../foundation/utils';
+
+// Usage examples:
+const imageSource = getPetImage(pet); // Using Pet object
+const imageSource = getPetImageSource('pets/milo.jpg'); // Using image path
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js >= 18
+- React Native development environment
+- iOS Simulator or Android Emulator
+
+### Installation
+
+1. Install dependencies:
+
+```bash
+yarn install
+```
+
+2. For iOS, install pods:
+
+```bash
+cd ios && pod install && cd ..
+```
+
+3. Start the app:
+
+```bash
+# For iOS
+yarn ios
+
+# For Android
 yarn android
 ```
 
-### iOS
+## Data Structure
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+The app uses a comprehensive Pet interface with the following properties:
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```typescript
+interface Pet {
+  id: string;
+  name: string;
+  species: 'Dog' | 'Cat' | 'Rabbit' | 'Bird' | 'Fish';
+  breed: string;
+  age: number;
+  gender: 'Male' | 'Female';
+  description: string;
+  image: string;
+  price: number;
+  location: string;
+  healthStatus: 'Healthy' | 'Needs Care' | 'Recovering';
+  vaccinated: boolean;
+  neutered: boolean;
+  size: 'Small' | 'Medium' | 'Large';
+  temperament: string[];
+  specialNeeds?: string;
+  availableForAdoption: boolean;
+}
 ```
 
-Then, and every time you update your native dependencies, run:
+## Navigation Flow
 
-```sh
-bundle exec pod install
-```
+1. **Home Tab** → Pet List Screen
+2. **Pet Card** → Pet Details Screen
+3. **Adopt Button** → Adoption Modal
+4. **Location Tab** → Location Screen
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## Future Enhancements
 
-```sh
-# Using npm
-npm run ios
+- Real Google Maps integration
+- User authentication
+- Real payment processing
+- Push notifications
+- Pet filtering and search
+- User profiles and favorites
+- Real-time chat with shelters
 
-# OR using Yarn
-yarn ios
-```
+## Technologies Used
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+- React Native 0.80.1
+- React Navigation 7.x
+- TypeScript
+- React Native Gesture Handler
+- React Native Safe Area Context
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Contributing
 
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+This is a demo project showcasing modern React Native development practices with beautiful UI/UX design and clean, maintainable code architecture.
