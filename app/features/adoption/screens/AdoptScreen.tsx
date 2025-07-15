@@ -12,6 +12,7 @@ import {
 import { colors } from '../../../foundation/theme';
 import { Pet } from '../../../foundation/assets/data/dummyList';
 import { getPetImage } from '../../../foundation/utils';
+import { InfoRow } from '../components';
 
 interface AdoptScreenProps {
   route: any;
@@ -34,7 +35,10 @@ const AdoptScreen: React.FC<AdoptScreenProps> = ({ route, navigation }) => {
         [
           {
             text: 'Great!',
-            onPress: () => navigation.navigate('Home'),
+            onPress: () => {
+              // Navigate back to the main tabs to show the pet list
+              navigation.navigate('MainTabs');
+            },
           },
         ],
       );
@@ -44,13 +48,6 @@ const AdoptScreen: React.FC<AdoptScreenProps> = ({ route, navigation }) => {
   const handleCancel = () => {
     navigation.goBack();
   };
-
-  const InfoRow = ({ label, value }: { label: string; value: string }) => (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -239,21 +236,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundLight,
     borderRadius: 12,
     padding: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  infoLabel: {
-    fontSize: 16,
-    color: colors.textMuted,
-  },
-  infoValue: {
-    fontSize: 16,
-    color: colors.textDark,
-    fontWeight: '600',
   },
   divider: {
     height: 1,

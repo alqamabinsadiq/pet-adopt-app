@@ -11,10 +11,10 @@ const Stack = createNativeStackNavigator<AppParamList>();
 const AppNavigator = () => {
   return (
     <Stack.Navigator
-      initialRouteName="Home"
+      initialRouteName="MainTabs"
       screenOptions={{ headerShown: false }}
     >
-      <Stack.Screen name="Home" component={TabNavigator} />
+      <Stack.Screen name="MainTabs" component={TabNavigator} />
 
       <Stack.Screen
         name="PetDetails"
