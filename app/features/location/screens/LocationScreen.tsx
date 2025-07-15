@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,143 +6,338 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
+  PermissionsAndroid,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { colors } from '../../../foundation/theme';
+import {
+  getCurrentLocation,
+  getMockLocation,
+  isGeolocationAvailable,
+  formatCoordinates,
+  calculateDistance,
+  type LocationData,
+} from '../../../foundation/utils';
+
+// Request Android runtime permission
+async function requestLocationPermission(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      {
+        title: 'Pet App Location Permission',
+        message:
+          'Pet Adoption App needs access to your location while you use the app to show nearby shelters.',
+        buttonPositive: 'OK',
+        buttonNegative: 'Cancel',
+      },
+    );
+    console.log('Android location permission:', granted);
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  } catch (err) {
+    console.warn('Permission error', err);
+    return false;
+  }
+}
 
 const LocationScreen: React.FC = () => {
-  const [location, setLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const [location, setLocation] = useState<LocationData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSimulator, setIsSimulator] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permissionRequested, setPermissionRequested] = useState(false);
+  const locationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Simulate getting user location
-  const getUserLocation = () => {
-    setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      // Mock coordinates (you can replace with actual location service)
-      const mockLocation = {
-        latitude: 37.7749 + (Math.random() - 0.5) * 0.01, // San Francisco area
-        longitude: -122.4194 + (Math.random() - 0.5) * 0.01,
-      };
-
-      setLocation(mockLocation);
-      setIsLoading(false);
-    }, 1500);
-  };
-
+  // Check if we're running on simulator
   useEffect(() => {
-    getUserLocation();
+    const checkEnvironment = async () => {
+      const isAvailable = await isGeolocationAvailable();
+      setIsSimulator(!isAvailable);
+      setHasPermission(isAvailable);
+    };
+    checkEnvironment();
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (locationTimeoutRef.current) clearTimeout(locationTimeoutRef.current);
+    };
+  }, []);
+
+  const requestPermissionAndGetLocation = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setLocation(null);
+    setPermissionRequested(true);
+
+    // Clear any existing timeout
+    if (locationTimeoutRef.current) {
+      clearTimeout(locationTimeoutRef.current);
+    }
+
+    if (isSimulator) {
+      // Use mock location for simulator with shorter delay
+      locationTimeoutRef.current = setTimeout(() => {
+        const mockLocation = getMockLocation();
+        setLocation(mockLocation);
+        setIsLoading(false);
+      }, 500);
+      return;
+    }
+
+    // Request permission first (Android)
+    if (Platform.OS === 'android') {
+      const granted = await requestLocationPermission();
+      if (!granted) {
+        setError('Location permission denied. Please enable it in Settings.');
+        setHasPermission(false);
+        setIsLoading(false);
+        return;
+      }
+      setHasPermission(true);
+    }
+
+    // Now fetch location after permission is granted
+    getCurrentLocation(
+      locationData => {
+        console.log('Location fetched successfully:', locationData);
+        setLocation(locationData);
+        setIsLoading(false);
+        setHasPermission(true);
+      },
+      locationError => {
+        console.log('Location error:', locationError);
+        setError(locationError.message);
+        setIsLoading(false);
+
+        // Handle different error cases
+        if (locationError.code === 1) {
+          // Permission denied
+          setHasPermission(false);
+        } else if (locationError.code === 2) {
+          // Location unavailable - could be GPS off
+          setHasPermission(true); // Permission might be granted but GPS off
+        } else if (locationError.code === 3) {
+          // Timeout - could be slow GPS
+          setHasPermission(true); // Permission likely granted
+        }
+      },
+      {
+        enableHighAccuracy: false, // Changed to false for faster response
+        timeout: 8000, // Reduced from 10000ms to 8000ms
+        maximumAge: 30000, // Increased from 5000ms to 30000ms for better caching
+      },
+    );
+  }, [isSimulator]);
+
+  // Reset state when component mounts (fresh start)
+  useEffect(() => {
+    setLocation(null);
+    setError(null);
+    setIsLoading(false);
+    setPermissionRequested(false);
+    // Don't auto-start location fetching - wait for user action or manual refresh
   }, []);
 
   const handleRefreshLocation = () => {
-    getUserLocation();
+    if (!isLoading) {
+      requestPermissionAndGetLocation();
+    }
   };
 
   const handleShareLocation = () => {
-    if (location) {
-      Alert.alert(
-        'Share Location',
-        `Your coordinates: ${location.latitude.toFixed(
-          6,
-        )}, ${location.longitude.toFixed(6)}`,
-        [
-          { text: 'Copy', onPress: () => console.log('Location copied') },
-          { text: 'Cancel', style: 'cancel' },
-        ],
+    if (location && !isLoading) {
+      const coordinates = formatCoordinates(
+        location.latitude,
+        location.longitude,
+      );
+      Alert.alert('Share Location', `Your coordinates: ${coordinates}`, [
+        { text: 'Copy', onPress: () => console.log('Location copied') },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
+  // Calculate distances to nearby shelters
+  const getNearbyShelters = () => {
+    if (!location) return [];
+
+    const shelters = [
+      { name: 'Downtown Rescue Center', lat: 37.7749, lng: -122.4194 },
+      { name: 'Cat Haven Shelter', lat: 37.7849, lng: -122.4094 },
+      { name: 'Golden Hearts Rescue', lat: 37.7649, lng: -122.4294 },
+    ];
+
+    return shelters
+      .map(shelter => ({
+        ...shelter,
+        distance: calculateDistance(
+          location.latitude,
+          location.longitude,
+          shelter.lat,
+          shelter.lng,
+        ),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+  };
+
+  const nearbyShelters = getNearbyShelters();
+
+  // Show different content based on state
+  const renderLocationContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Getting your location...</Text>
+          <Text style={styles.loadingSubtext}>
+            {isSimulator
+              ? 'Simulating location data...'
+              : !permissionRequested
+              ? 'Requesting location permission...'
+              : 'Please wait while we get your GPS coordinates'}
+          </Text>
+        </View>
       );
     }
+
+    if (error) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          {hasPermission === false && (
+            <Text style={styles.errorSubtext}>
+              Please enable location services in your device settings and try
+              again.
+            </Text>
+          )}
+        </View>
+      );
+    }
+
+    if (location) {
+      return (
+        <View style={styles.coordinatesContainer}>
+          <Text style={styles.coordinatesLabel}>Current Coordinates</Text>
+          <Text style={styles.coordinates}>
+            {formatCoordinates(location.latitude, location.longitude)}
+          </Text>
+
+          {location.accuracy && (
+            <Text style={styles.accuracyText}>
+              Accuracy: ±{Math.round(location.accuracy)} meters
+            </Text>
+          )}
+
+          <View style={styles.mapPlaceholder}>
+            <Text style={styles.mapPlaceholderText}>🗺️</Text>
+            <Text style={styles.mapPlaceholderTitle}>Map View</Text>
+            <Text style={styles.mapPlaceholderSubtitle}>
+              {isSimulator
+                ? 'Simulated location for testing'
+                : 'Google Maps integration would be here'}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Initial state - no location, no error, not loading
+    return (
+      <View style={styles.initialContainer}>
+        <Text style={styles.initialText}>📍</Text>
+        <Text style={styles.initialTitle}>Get Your Location</Text>
+        <Text style={styles.initialSubtitle}>
+          Tap the refresh button below to get your current location and find
+          nearby pet shelters.
+        </Text>
+        <TouchableOpacity
+          style={styles.getLocationButton}
+          onPress={requestPermissionAndGetLocation}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.getLocationButtonText}>Get My Location</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Your Location</Text>
           <Text style={styles.subtitle}>
             Find nearby pet shelters and adoption centers
           </Text>
-        </View>
-
-        {/* Location Display */}
-        <View style={styles.locationCard}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Getting your location...</Text>
-            </View>
-          ) : location ? (
-            <View style={styles.coordinatesContainer}>
-              <Text style={styles.coordinatesLabel}>Current Coordinates</Text>
-              <Text style={styles.coordinates}>
-                {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-              </Text>
-
-              <View style={styles.mapPlaceholder}>
-                <Text style={styles.mapPlaceholderText}>🗺️</Text>
-                <Text style={styles.mapPlaceholderTitle}>Map View</Text>
-                <Text style={styles.mapPlaceholderSubtitle}>
-                  Google Maps integration would be here
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>Unable to get location</Text>
+          {isSimulator && (
+            <View style={styles.simulatorBadge}>
+              <Text style={styles.simulatorText}>Simulator Mode</Text>
             </View>
           )}
         </View>
+
+        {/* Location Display */}
+        <View style={styles.locationCard}>{renderLocationContent()}</View>
 
         {/* Nearby Places */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Nearby Pet Shelters</Text>
           <View style={styles.placesList}>
-            <View style={styles.placeItem}>
-              <Text style={styles.placeIcon}>🏠</Text>
-              <View style={styles.placeInfo}>
-                <Text style={styles.placeName}>Downtown Rescue Center</Text>
-                <Text style={styles.placeDistance}>0.5 miles away</Text>
+            {nearbyShelters.map((shelter, index) => (
+              <View key={index} style={styles.placeItem}>
+                <Text style={styles.placeIcon}>🏠</Text>
+                <View style={styles.placeInfo}>
+                  <Text style={styles.placeName}>{shelter.name}</Text>
+                  <Text style={styles.placeDistance}>
+                    {shelter.distance.toFixed(1)} km away
+                  </Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.placeItem}>
-              <Text style={styles.placeIcon}>🐾</Text>
-              <View style={styles.placeInfo}>
-                <Text style={styles.placeName}>Cat Haven Shelter</Text>
-                <Text style={styles.placeDistance}>1.2 miles away</Text>
-              </View>
-            </View>
-            <View style={styles.placeItem}>
-              <Text style={styles.placeIcon}>🏥</Text>
-              <View style={styles.placeInfo}>
-                <Text style={styles.placeName}>Golden Hearts Rescue</Text>
-                <Text style={styles.placeDistance}>2.1 miles away</Text>
-              </View>
-            </View>
+            ))}
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.refreshButton}
+            style={[styles.refreshButton, isLoading && styles.disabledButton]}
             onPress={handleRefreshLocation}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
-            <Text style={styles.refreshButtonText}>Refresh Location</Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.textLight} />
+            ) : (
+              <Text style={styles.refreshButtonText}>Refresh Location</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.shareButton}
+            style={[
+              styles.shareButton,
+              (!location || isLoading) && styles.disabledButton,
+            ]}
             onPress={handleShareLocation}
             activeOpacity={0.8}
-            disabled={!location}
+            disabled={!location || isLoading}
           >
             <Text style={styles.shareButtonText}>Share Location</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -151,6 +346,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundLight,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40, // Extra padding at bottom for better scrolling
   },
   content: {
     flex: 1,
@@ -170,6 +372,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textMuted,
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  simulatorBadge: {
+    backgroundColor: colors.warning,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  simulatorText: {
+    color: colors.textDark,
+    fontSize: 12,
+    fontWeight: '600',
   },
   locationCard: {
     backgroundColor: colors.background,
@@ -185,13 +399,53 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  initialContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  initialText: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  initialTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.textDark,
+    marginBottom: 8,
+  },
+  initialSubtitle: {
+    fontSize: 16,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  getLocationButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  getLocationButtonText: {
+    color: colors.textLight,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: 40,
   },
   loadingText: {
     fontSize: 16,
+    color: colors.textDark,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  loadingSubtext: {
+    fontSize: 14,
     color: colors.textMuted,
+    textAlign: 'center',
   },
   coordinatesContainer: {
     alignItems: 'center',
@@ -205,8 +459,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.textDark,
-    marginBottom: 20,
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  accuracyText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 20,
   },
   mapPlaceholder: {
     width: '100%',
@@ -241,6 +500,13 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: colors.error,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 24,
@@ -290,6 +556,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
   },
   refreshButtonText: {
     color: colors.textLight,
@@ -302,11 +570,16 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
   },
   shareButtonText: {
     color: colors.textLight,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
 
