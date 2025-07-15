@@ -1,8 +1,18 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
 import { colors } from '../../../foundation/theme';
 import { Pet } from '../../../foundation/assets/data/dummyList';
 import { getPetImage } from '../../../foundation/utils';
+
+const { width: screenWidth } = Dimensions.get('window');
+const imageSize = screenWidth - 32; // 16px margin on each side - square image container
 
 interface PetCardProps {
   pet: Pet;
@@ -69,8 +79,9 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
-    height: 200,
-    width: '100%',
+    width: imageSize,
+    height: imageSize,
+    backgroundColor: colors.backgroundLight,
   },
   image: {
     width: '100%',
@@ -85,6 +96,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
+    shadowColor: colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   priceText: {
     color: colors.textLight,

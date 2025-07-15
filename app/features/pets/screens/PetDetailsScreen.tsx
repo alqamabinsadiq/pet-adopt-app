@@ -7,10 +7,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Dimensions,
 } from 'react-native';
 import { colors } from '../../../foundation/theme';
 import { Pet } from '../../../foundation/assets/data/dummyList';
 import { getPetImage } from '../../../foundation/utils';
+
+const { height: screenHeight } = Dimensions.get('window');
+const heroImageHeight = screenHeight * 0.4; // 40% of screen height for better proportions
 
 interface PetDetailsScreenProps {
   route: any;
@@ -146,8 +150,9 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
-    height: 300,
+    height: heroImageHeight,
     width: '100%',
+    backgroundColor: colors.backgroundLight,
   },
   image: {
     width: '100%',
@@ -170,6 +175,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    shadowColor: colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
   price: {
     color: colors.textLight,

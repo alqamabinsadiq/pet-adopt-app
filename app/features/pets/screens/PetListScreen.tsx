@@ -25,6 +25,7 @@ const PetListScreen: React.FC<PetListScreenProps> = ({ navigation }) => {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        bounces={true}
       />
     </SafeAreaView>
   );
@@ -36,7 +37,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundLight,
   },
   listContainer: {
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingBottom: 20, // Extra padding at bottom for better scrolling
   },
 });
 
