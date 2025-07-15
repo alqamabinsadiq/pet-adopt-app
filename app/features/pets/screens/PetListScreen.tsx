@@ -1,26 +1,43 @@
-// PetDetailsScreen.js
 import React from 'react';
-import { View, Text } from 'react-native';
+import { FlatList, StyleSheet, SafeAreaView } from 'react-native';
+import { PetCard } from '../components';
+import { dummyList, Pet } from '../../../foundation/assets/data/dummyList';
+import { colors } from '../../../foundation/theme';
 
-const PetListScreen = ({ navigation }) => {
+interface PetListScreenProps {
+  navigation: any;
+}
+
+const PetListScreen: React.FC<PetListScreenProps> = ({ navigation }) => {
+  const handlePetPress = (pet: Pet) => {
+    navigation.navigate('PetDetails', { pet });
+  };
+
+  const renderPetCard = ({ item }: { item: Pet }) => (
+    <PetCard pet={item} onPress={handlePetPress} />
+  );
+
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-      <Text style={{ fontSize: 24 }}>Listing</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={dummyList}
+        renderItem={renderPetCard}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.backgroundLight,
+  },
+  listContainer: {
+    paddingVertical: 8,
+  },
+});
 
 export default PetListScreen;
