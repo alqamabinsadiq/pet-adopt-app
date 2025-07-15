@@ -1,14 +1,17 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { colors } from '../foundation/theme';
 import PetListScreen from '../features/pets/screens/PetListScreen';
 import LocationScreen from '../features/location/screens/LocationScreen';
 import { TabParamList } from './RouteParamTypes';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const TabNavigator: React.FC = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -18,9 +21,9 @@ const TabNavigator: React.FC = () => {
           backgroundColor: colors.background,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          paddingBottom: 8,
           paddingTop: 8,
-          height: 60,
+          paddingBottom: Platform.OS === 'ios' ? 16 + insets.bottom / 2 : 16,
+          height: Platform.OS === 'ios' ? 60 + insets.bottom : 90,
         },
         tabBarLabelStyle: {
           fontSize: 12,
